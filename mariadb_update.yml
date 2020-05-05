@@ -1,0 +1,47 @@
+--- # Install mariadb via ansible on centOS
+- hosts: webservers
+  user: root
+  vars:
+    mysql_root_password: passwd
+  tasks:
+  - name: Install MYSQL
+    yum:
+      name: mariadb-server #debian: mysql-server
+      state: present
+  - name: Install the Python MySQL Support Libraries
+    yum: pkg=MySQL-python state=latest
+  - name: start mysql server and enable it on reboot
+    service: name=mariadb state=started enabled=true #debian: mysql
+  - name: Install httpd packages
+    yum: pkg=httpd state=present
+  - name: start httpd service and enable it on reboot
+    service: name=httpd state=started enabled=true
+  - name: Install PHP
+    yum: name={{ item }} state=present
+    with_items:
+      - php
+      - php-devel
+      - php-common
+      - php-mcrypt
+      - php-gd
+      - php-mysql
+  - name: "Copy the file"
+    copy: src=/root/index.html dest=/var/www/html/index.html 
+  - name: update mysql root password for all root accounts
+    mysql_user:
+      name: root
+      host: localhost
+      password: "{{ mysql_root_password }}"
+      login_user: root
+      host_all: yes
+      login_password: "{{ mysql_root_password }}"
+      check_implicit_admin: yes
+      priv: "*.*:ALL,GRANT"
+  - name: Create a New Test DB called edu
+    mysql_db: 
+      login_user: root 
+      login_password: "{{ mysql_root_password }}"
+      db: edu
+      state: present
+  - name: Create table reg
+    command: mysql -u root -ppasswd -e 'create table reg (name varchar(30),email varchar(30),password varchar(30));' edu
